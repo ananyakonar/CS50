@@ -29,13 +29,7 @@ void freeing(node* childnode)
 
     free(childnode);
 }
-
-// create global variable to count size
 int dict_Size = 0;
-
-/**
- * Returns true if word is in dictionary else false.
- */
 bool check(const char* word)
 {
     int index;
@@ -76,15 +70,11 @@ bool load(const char* dictionary)
     FILE* filepointer = fopen(dictionary, "r");
     int index;
     char word[LENGTH+1];
-
-    // if cannot open file, return false
     if (filepointer == NULL)
     {
         return false;
     }
-
-    // Creating Tries and initialize default value & pointer
-root_node= malloc(sizeof(node));
+    root_node= malloc(sizeof(node));
  root_node->is_word = false;
     for (int j = 0; j < 27; j++)
     {
@@ -117,29 +107,21 @@ root_node= malloc(sizeof(node));
                 {
                     nodenew->childnode[k] = NULL;
                 }
-                // and set children[index] to point at it
                 path->childnode[index] = nodenew;
             }
-            // move traversal pointer to it
+            
             path = path->childnode[index];
         }
-        // At end of word, set is_word true;
-        path->is_word = true;
+       path->is_word = true;
         dict_Size++;
     }
-
-
-    fclose(filepointer);
+fclose(filepointer);
  return true;
-}
 
-
-unsigned int size(void)
+}unsigned int size(void)
 {
     return dict_Size;
 }
-
-
 bool unload(void)
 {
     node* path =  root_node;
