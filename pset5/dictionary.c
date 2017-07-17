@@ -1,190 +1,149 @@
+
+
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
 
 #include "dictionary.h"
 
-
-// size of hashtable
-#define SIZE 1000000
-
-// create nodes for linked list
 typedef struct node
 {
-    char word[LENGTH+1];
-    struct node* next;
+    bool is_word;
+    struct node* childnode[27];
 }
 node;
 
-// create hashtable
-node* hashtable[SIZE] = {NULL};
+node* root_node;
 
-// create hash function
-int hash (const char* word)
+
+void freeing(node* childnode)
 {
-    int hash = 0;
-    int n;
-    for (int i = 0; word[i] != '\0'; i++)
+    for (int i = 0; i < 27; i++)
     {
-        // alphabet case
-        if(isalpha(word[i]))
-            n = word [i] - 'a' + 1;
-        
-        // comma case
-        else
-            n = 27;
-            
-        hash = ((hash << 3) + n) % SIZE;
+        if (childnode->childnode[i] != NULL)
+        {
+            freeing(childnode->childnode[i]);
+        }
     }
-    return hash;    
+
+    free(childnode);
 }
 
 // create global variable to count size
-int dictionarySize = 0;
-
-/**
- * Loads dictionary into memory.  Returns true if successful else false.
- */
-bool load(const char* dictionary)
-{
-    // TODO
-    // opens dictionary
-    FILE* file = fopen(dictionary, "r");
-    if (file == NULL)
-        return false;
-    
-    // create an array for word to be stored in
-    char word[LENGTH+1];
-    
-    // scan through the file, loading each word into the hash table
-    while (fscanf(file, "%s\n", word)!= EOF)
-    {
-        // increment dictionary size
-        dictionarySize++;
-        
-        // allocate memory for new word 
-        node* newWord = malloc(sizeof(node));
-        
-        // put word in the new node
-        strcpy(newWord->word, word);
-        
-        // find what index of the array the word should go in
-        int index = hash(word);
-        
-        // if hashtable is empty at index, insert
-        if (hashtable[index] == NULL)
-        {
-            hashtable[index] = newWord;
-            newWord->next = NULL;
-        }
-        
-        // if hashtable is not empty at index, append
-        else
-        {
-            newWord->next = hashtable[index];
-            hashtable[index] = newWord;
-        }      
-    }
-    
-    // close file
-    fclose(file);
-    
-    // return true if successful 
-    return true;
-}
+int dict_Size = 0;
 
 /**
  * Returns true if word is in dictionary else false.
  */
 bool check(const char* word)
 {
-    // TODO
-    // creates a temp variable that stores a lower-cased version of the word
-    char temp[LENGTH + 1];
-    int len = strlen(word);
-    for(int i = 0; i < len; i++)
-        temp[i] = tolower(word[i]);
-    temp[len] = '\0';
-    
-    // find what index of the array the word should be in
-    int index = hash(temp);
-    
-    // if hashtable is empty at index, return false
-    if (hashtable[index] == NULL)
+    int index;
+
+    node* path = root_node;
+
+    for (int i = 0; word[i] != '\0'; i++)
+    {
+
+        if (word[i] == '\'')
+        {
+            index = 26;
+        }
+        else
+
+        {
+            index = tolower(word[i]) - 'a';
+        }
+
+
+        path = path->childnode[index];
+       if (path == NULL)
+        {
+            return false;
+        }
+    }
+    if (path->is_word == true)
+    {
+        return true;
+    }
+    else
     {
         return false;
     }
-    
-    // create cursor to compare to word
-    node* cursor = hashtable[index];
-    
-    // if hashtable is not empty at index, iterate through words and compare
-    while (cursor != NULL)
+}
+bool load(const char* dictionary)
+{
+    FILE* filepointer = fopen(dictionary, "r");
+    int index;
+    char word[LENGTH+1];
+
+    // if cannot open file, return false
+    if (filepointer == NULL)
     {
-        if (strcmp(temp, cursor->word) == 0)
-        {
-            return true;
-        }
-        cursor = cursor->next;
+        return false;
     }
-    
-    // if you don't find the word, return false
-    return false;
+
+    // Creating Tries and initialize default value & pointer
+root_node= malloc(sizeof(node));
+ root_node->is_word = false;
+    for (int j = 0; j < 27; j++)
+    {
+         root_node->childnode[j] = NULL;
+    }
+
+
+    while(fscanf(filepointer, "%s\n", word) != EOF)
+    {
+
+        node* path =  root_node;
+        for (int i = 0; word[i] != '\0'; i++)
+        {
+            if (word[i] == '\'')
+            {
+                index = 26;
+            }
+            else
+
+            {
+                index = tolower(word[i]) - 'a';
+            }
+
+            if (path->childnode[index] == NULL)
+            {
+
+                node* nodenew = malloc(sizeof(node));
+                nodenew->is_word = false;
+                for (int k = 0; k < 27; k++)
+                {
+                    nodenew->childnode[k] = NULL;
+                }
+                // and set children[index] to point at it
+                path->childnode[index] = nodenew;
+            }
+            // move traversal pointer to it
+            path = path->childnode[index];
+        }
+        // At end of word, set is_word true;
+        path->is_word = true;
+        dict_Size++;
+    }
+
+
+    fclose(filepointer);
+ return true;
 }
 
-/**
- * Returns number of words in dictionary if loaded else 0 if not yet loaded.
- */
+
 unsigned int size(void)
 {
-    // TODO
-    // if dictionary is loaded, return number of words
-    if (dictionarySize > 0)
-    {
-        return dictionarySize;
-    }
-     
-    // if dictionary hasn't been loaded, return 0
-    else
-        return 0;
+    return dict_Size;
 }
 
-/**
- * Unloads dictionary from memory.  Returns true if successful else false.
- */
+
 bool unload(void)
 {
-    // TODO
-    // create a variable to go through index
-    int index = 0;
-    
-    // iterate through entire hashtable array
-    while (index < SIZE)
-    {
-        // if hashtable is empty at index, go to next index
-        if (hashtable[index] == NULL)
-        {
-            index++;
-        }
-        
-        // if hashtable is not empty, iterate through nodes and start freeing
-        else
-        {
-            while(hashtable[index] != NULL)
-            {
-                node* cursor = hashtable[index];
-                hashtable[index] = cursor->next;
-                free(cursor);
-            }
-            
-            // once hashtable is empty at index, go to next index
-            index++;
-        }
-    }
-    
-    // return true if successful
+    node* path =  root_node;
+    freeing(path);
     return true;
 }
+
